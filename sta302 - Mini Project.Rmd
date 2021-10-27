@@ -1,0 +1,215 @@
+---
+title: 'STA302H1F: Mini Project 1'
+author: "Yichen Liu - 1005790495"
+date: "August 1st, 2021"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+lang: en
+---
+
+```{r setup, include=FALSE,message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(kableExtra)
+library(knitr)
+library(gridExtra)
+library("ggplot2")
+library(tidyverse)
+```
+
+\newpage
+
+# Question 1
+
+```{r}
+beta0 <- 0.5
+beta1 <- 2
+beta2 <- 1
+sigma <- 2
+n <- 100
+set.seed(1005790495)
+X_1 <- sample(seq(1,15, length = n))
+X_2 <- sample(seq(1,15, length = n))
+cor(X_1, X_2)
+```
+
+The two predictor variables have a correlation of -0.239, which is quite low. Because the variables are simulated independently, the correlation makes sense.
+
+\newpage
+
+# Question 2
+
+```{r}
+set.seed(1005790495)
+error <- rnorm(n, mean = 0, sd = sigma)
+Y <- beta0 + beta1*X_1 + beta2*X_2 + error
+sim_data <- data.frame(Y = Y, X_1 = X_1, X_2 = X_2)
+multi.fit <- lm(Y ~ X_1 + X_2, data = sim_data)
+
+coefficients <- data.frame(estimator = c("beta0", "beta1", "beta2"),
+                           estimate = c(summary(multi.fit)$coefficients[1,1],
+                                        summary(multi.fit)$coefficients[2,1],
+                                        summary(multi.fit)$coefficients[3,1]))
+
+kbl(coefficients, caption = "Table of coefficients", digits = 4) %>%
+  kable_paper(full_width = F)
+  
+```
+
+The regression coefficient for beta $\hat{\beta_0}$ from the multiple linear regression model is -0.6264, for $\hat{\beta_1}$ is 2.112, for $\hat{\beta_2}$ is 1.0734.
+
+\newpage
+
+# Question 4
+
+```{r}
+X_0=rep(1,n)
+X=cbind(X_0, X_1, X_2)
+XY=t(X)%*%Y
+XX=t(X)%*%X
+Inverse=solve(XX)
+beta_Q4=Inverse%*%XY
+
+error_Q4 <- Y-X %*% beta_Q4
+S2 <- (t(error_Q4) %*% error_Q4) / (n-2-1)
+S2 <- as.numeric(S2)
+
+beta_value <- data.frame(beta = c("beta0", "beta1", "beta2"),
+                           value = c(beta_Q4))
+
+kbl(beta_value, caption = "Table of beta", digits = 4) %>%
+  kable_paper(full_width = F)
+
+standard_error_value <- data.frame(beta = c("beta0", "beta1", "beta2"),
+                           error = c(sqrt(diag(Inverse * S2))))
+
+kbl(standard_error_value, caption = "Standard error of beta", digits = 4) %>%
+  kable_paper(full_width = F)
+  
+```
+
+We could notice that the estimates from lm function in question 2 and the estimates we obtained in this quetsion are the same.
+
+\newpage
+
+# Question 5
+	
+```{r}
+set.seed(1005790495)
+beta_0 <- c()
+beta_1 <- c()
+beta_2 <- c()
+for (i in 1 : 1000) {
+  error <- rnorm(n, mean = 0, sd = sigma)
+  Y <- beta0 + beta1*X_1 + beta2*X_2 + error
+  sim_data <- data.frame(Y = Y, X_1 = X_1, X_2 = X_2)
+  multi.fit <- lm(Y ~ X_1 + X_2, data = sim_data)
+  beta_0[i] <- coefficients(multi.fit)[1]
+  beta_1[i] <- coefficients(multi.fit)[2]
+  beta_2[i] <- coefficients(multi.fit)[3]
+}
+beta_Q5 <- data.frame(beta0 = beta_0,
+                    beta1 = beta_1,
+                    beta2 = beta_2)
+
+kbl(colMeans(beta_Q5), caption = "Mean of each beta", digits = 4) %>%
+  kable_paper(full_width = F)
+
+```
+
+\newpage
+
+# Question 6
+
+```{r}
+ggplot0 <- ggplot(beta_Q5, aes(x=beta0)) +
+  geom_histogram(bins = 12, col="palegreen1", fill="skyblue1") + 
+              geom_vline(xintercept = beta0, col="royalblue") + 
+              geom_vline(xintercept = mean(beta_Q5$beta0), col="orchid")
+ggplot1 <- ggplot(beta_Q5, aes(x=beta1)) + 
+  geom_histogram(bins = 12, col="violetred1", fill="palevioletred2") + 
+              geom_vline(xintercept = beta1, col="royalblue") + 
+              geom_vline(xintercept = mean(beta_Q5$beta1), col="orchid")
+ggplot2 <- ggplot(beta_Q5, aes(x=beta2)) + 
+  geom_histogram(bins = 12, col="violetred1", fill="violetred4") + 
+              geom_vline(xintercept = beta2, col="royalblue") + 
+              geom_vline(xintercept = mean(beta_Q5$beta2), col="orchid")
+grid.arrange(ggplot0, ggplot1, ggplot2, nrow = 1, ncol = 3)
+```
+
+According to the histograms, we could notice that the mean for each of the estimates is closely related to the true values of the parameters. The reasons can be explained as follows. In the multiple linear regression, the theoretical distribution of $\hat{\beta} = \hat{\beta_0}, \hat{\beta_1}, \hat{\beta_2}$ is the sampling distribution of $\hat{\beta_0}, \hat{\beta_1}, \hat{\beta_2}$. By definition:
+
+$$
+\begin{aligned}
+& \boldsymbol{\hat{\beta}} \sim N(\boldsymbol{\beta}, \sigma^2(X'X)^{-1}) \\
+& \boldsymbol{\hat{\beta}} = [\hat{\beta_0}, \hat{\beta_1}, \hat{\beta_2}] \\
+\end{aligned}
+$$
+The experimental values from the variables we randomly stimulated from the distribution can be used to estimate the theoretical values of this distribution. The medium points of the histograms are the means of the experimental values we simulated previously. The larger the N, the closer the histograms of experimental values and the theoretical sampling distribution will be, and thereby the closer the mean for each of the estimates and the true values of the parameters will be. According to Question 5, the number of simulations N is set at 1000, which is large enough. Thus, the results make sense.
+
+# Question 7
+
+```{r}
+set.seed(1005790495)
+alpha = 0.05
+#number of parameters
+p = 2
+beta0_CI = 0
+beta1_CI = 0
+beta2_CI = 0
+for (i in 1 : 1000) {
+  error <- rnorm(n, mean = 0, sd = sigma)
+  Y <- beta0 + beta1*X_1 + beta2*X_2 + error
+  sim_data <- data.frame(Y = Y, X_1 = X_1, X_2 = X_2)
+  multi.fit <- lm(Y ~ X_1 + X_2, data=sim_data)
+  
+  beta0_hat <- coefficients(multi.fit)[1]
+  beta1_hat <- coefficients(multi.fit)[2]
+  beta2_hat <- coefficients(multi.fit)[3]
+  
+  beta0_se <- summary(multi.fit)$coefficients[1,2]
+  beta1_se <- summary(multi.fit)$coefficients[2,2]
+  beta2_se <- summary(multi.fit)$coefficients[3,2]
+  
+  #t-quantile
+  beta0_lower <- beta0_hat - qt(1-alpha/2, df = n-p-1)*beta0_se
+  beta0_upper <- beta0_hat + qt(1-alpha/2, df = n-p-1)*beta0_se
+  
+  beta1_lower <- beta1_hat - qt(1-alpha/2, df = n-p-1)*beta1_se
+  beta1_upper <- beta1_hat + qt(1-alpha/2, df = n-p-1)*beta1_se
+  
+  beta2_lower <- beta2_hat - qt(1-alpha/2, df = n-p-1)*beta2_se
+  beta2_upper <- beta2_hat + qt(1-alpha/2, df = n-p-1)*beta2_se
+  
+  #count for any condition
+  beta0_CI <- beta0_CI + sum(ifelse(beta0_lower <= beta0 & beta0 <= beta0_upper, 1, 0))
+  beta1_CI <- beta1_CI + sum(ifelse(beta1_lower <= beta1 & beta1 <= beta1_upper, 1, 0))
+  beta2_CI <- beta2_CI + sum(ifelse(beta2_lower <= beta2 & beta2 <= beta2_upper, 1, 0))
+
+}
+
+
+CI <- data.frame(Betas = c("beta0", "beta1", "beta2"),
+                 Contain_true_parameter = c("YES", "YES", "YES"),
+                 Lowerbound = c(beta0_lower, beta1_lower, beta2_lower),
+                 Upperbound = c(beta0_upper, beta1_upper, beta2_upper))
+
+kbl(CI, caption = "CI of betas") %>%
+  kable_paper(full_width = F) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(3, color = "white", bold = T, background = "orange")
+  
+coverage <- data.frame(beta0_CI = beta0_CI/1000,
+                    beta1_CI = beta1_CI/1000,
+                    beta2_CI = beta2_CI/1000)
+kable(coverage, caption = "Coverage probability")
+```   
